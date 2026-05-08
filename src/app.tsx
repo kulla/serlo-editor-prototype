@@ -1,5 +1,3 @@
-import './App.css'
-
 import { useEffect } from 'react'
 import { syncCDRTs } from './cdrt/sync'
 import { EditorName } from './cdrt/types'
