@@ -41,15 +41,18 @@ export function getVisibleChildren({
   }
 }
 
-export function getProperty<P extends Record<string, S.Schema>>({
+export function getProperty<
+  P extends Record<string, S.Schema>,
+  K extends keyof P & string,
+>({
   store,
   node,
   propertyName,
 }: {
   store: EditorStore
   node: FlatNode<S.ObjectSchema<P>>
-  propertyName: keyof P & string
-}): FlatNode {
+  propertyName: K
+}): FlatNode<P[K]> {
   const propertyKey = node.value.get(propertyName)
 
   invariant(
@@ -57,7 +60,7 @@ export function getProperty<P extends Record<string, S.Schema>>({
     `Property ${propertyName} is missing in node ${node.key}`,
   )
 
-  return store.get(propertyKey)
+  return store.get(propertyKey) as FlatNode<P[K]>
 }
 
 export const isTruthValue = createGuard(S.isTruthValue)
