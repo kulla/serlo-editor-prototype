@@ -59,7 +59,11 @@ export function createRichTextEditor({
   const editor = createEditor({ extension })
 
   if (defaultContent != null) {
-    prosemirrorJSONToYXmlFragment(editor.schema, defaultContent, fragment)
+    const schema = editor.schema as Parameters<
+      typeof prosemirrorJSONToYXmlFragment
+    >[0]
+
+    prosemirrorJSONToYXmlFragment(schema, defaultContent, fragment)
   }
 
   return editor
