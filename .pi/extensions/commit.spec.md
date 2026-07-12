@@ -1,7 +1,8 @@
 # /commit extension specification
 
 ## Location
-- **Implementation file:** `.pi/agent/extensions/commit.ts`
+- **Implementation file:** `.pi/extensions/commit.ts`
+- This is a project-local extension.
 
 ## Purpose
 Provide a `/commit` command that prepares a conventional git commit message from the current pi session and repository state.
@@ -14,15 +15,17 @@ When `/commit` is invoked:
 
 2. **Build context from the current session**
    - First collect all AI **result messages** produced since that timestamp.
-   - Use only those result messages if they contain enough information to infer a commit message.
-   - If the result messages are empty or insufficient, also include the related **user prompts** from the same time window.
+   - Ask **gpt-4o-mini** whether those result messages are sufficient to infer a conventional commit message.
+   - If the answer is yes, use only those result messages.
+   - If the result messages are empty or insufficient, also include the related **user prompts** from the same time window and re-evaluate.
+   - If the session context is still insufficient, continue to the git-diff fallback.
 
 3. **Fallback to git diff if needed**
-   - If the session messages still do not provide enough context, use the repository diff as a second fallback.
-   - Include `git diff` and any untracked/new files as needed.
+   - Use the repository diff as a second fallback.
+   - Include `git diff`, `git status --porcelain`, and the contents/summaries of any untracked/new files as needed.
 
 4. **Generate a commit message with ChatGPT 4o mini**
-   - Send the gathered context to **gpt-4o-mini** via pi sdk.
+   - Send the gathered context to **gpt-4o-mini** via the pi SDK.
    - The model must return a **conventional commit** message.
    - Keep the output concise and suitable for use as a commit template.
 
