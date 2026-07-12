@@ -44,11 +44,6 @@ export default function (pi: ExtensionAPI) {
         return
       }
 
-      if (!(await hasChanges(pi, ctx))) {
-        notify(ctx, 'No changes to commit.', 'warning')
-        return
-      }
-
       notify(ctx, `Commit template ready: ${commitMessage}`, 'info')
 
       const committed = await stageAndOpenCommitEditor(pi, ctx, commitMessage)
