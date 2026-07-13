@@ -22,6 +22,7 @@ When `/commit` is invoked:
 3. **Fallback to git diff if needed**
    - Use the repository diff as a second fallback.
    - Include `git diff`, `git status --porcelain`, and the contents/summaries of any untracked/new files as needed.
+   - Trucanate the diff so that it is not too much.
 
 4. **Generate a commit message with ChatGPT 4o mini**
    - Send each gathered context candidate to **gpt-4o-mini** via the pi SDK.
@@ -45,7 +46,7 @@ on /commit:
   contexts = [
     assistant result messages from session,
     assistant result messages + user prompts from session,
-    git status / diff / untracked file summaries,
+    trucanated git status / diff / untracked file summaries,
   ]
 
   for context in contexts:
