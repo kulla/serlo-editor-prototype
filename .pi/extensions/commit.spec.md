@@ -22,8 +22,11 @@ When `/commit` is invoked:
 3. **Fallback to git diff if needed**
    - Use the repository diff as a second fallback.
    - Include `git diff`, `git status --porcelain`, and the contents/summaries of any untracked/new files as needed.
-   - Trucanate the diff so that it is not too much.
-   - Limit the number of untracked files included and truncate each file summary.
+   - Truncate the git context to keep it compact.
+   - Truncate `git status`, staged diff, working tree diff, and combined untracked-file summaries to 12,000 characters.
+   - Limit untracked files to 10 entries.
+   - Truncate each untracked-file summary to 2,000 characters.
+   - When truncation happens, append a clear truncation marker.
 
 4. **Generate a commit message with ChatGPT 4o mini**
    - Send each gathered context candidate to **gpt-4o-mini** via the pi SDK.
@@ -49,10 +52,11 @@ on /commit:
   contexts = [
     assistant result messages from session,
     assistant result messages + user prompts from session,
-    trucanated git status / diff / untracked file summaries,
+    truncated git status / diff / untracked file summaries,
   ]
-  truncate git status / diff / untracked file summaries
-  limit untracked files and truncate each file summary
+  truncate git status / diff / untracked file summaries to 12,000 characters
+  limit untracked files to 10 entries
+  truncate each file summary to 2,000 characters
 
   if model cannot be found or authenticated:
     notify user and stop
