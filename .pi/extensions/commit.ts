@@ -168,8 +168,6 @@ async function stageAndOpenCommitEditor(
   const templatePath = join(tempDir, 'COMMIT_EDITMSG')
 
   try {
-    await writeFile(templatePath, `${commitMessage}\n`, 'utf8')
-
     const add = await git(pi, ctx, ['add', '-A'])
     if (add.code !== 0) {
       notify(
@@ -180,7 +178,30 @@ async function stageAndOpenCommitEditor(
       return false
     }
 
-    const commit = await git(pi, ctx, ['commit', '--template', templatePath])
+    let finalCommitMessage = commitMessage
+    if (ctx.hasUI) {
+      const edited = await ctx.ui.editor('Edit commit message', commitMessage)
+      if (edited === undefined) {
+        notify(ctx, 'Commit was cancelled.', 'warning')
+        return false
+      }
+
+      finalCommitMessage = normalizeOneLine(edited)
+      if (!finalCommitMessage) {
+        notify(ctx, 'Commit message is empty.', 'warning')
+        return false
+      }
+    }
+
+    await writeFile(templatePath, `${finalCommitMessage}\n`, 'utf8')
+
+    const commit = await git(
+      pi,
+      ctx,
+      ctx.hasUI
+        ? ['commit', '-F', templatePath]
+        : ['commit', '--template', templatePath],
+    )
     return commit.code === 0
   } finally {
     await rm(tempDir, { recursive: true, force: true }).catch(() => undefined)
