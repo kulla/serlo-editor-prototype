@@ -8,8 +8,6 @@ import type {
   SessionEntry,
 } from '@earendil-works/pi-coding-agent'
 
-const MODEL_PROVIDER = 'openai'
-const MODEL_ID = 'gpt-5.4-mini'
 const GIT_SOURCE = 'git status, diffs, and untracked files'
 const INSUFFICIENT_CONTEXT_RESPONSE = 'CONTEXT_NOT_ENOUGH'
 const GIT_CONTEXT_TOTAL_MAX_CHARS = 5_000
@@ -36,7 +34,7 @@ export default function (pi: ExtensionAPI) {
       if (!commitMessage) {
         notify(
           ctx,
-          `Unable to generate a commit message with ${MODEL_ID}.`,
+          `Unable to generate a commit message with the active model.`,
           'error',
         )
         return
@@ -124,19 +122,15 @@ async function askModel(
   ctx: ExtensionCommandContext,
   prompt: string,
 ): Promise<string | null> {
-  const model = ctx.modelRegistry.find(MODEL_PROVIDER, MODEL_ID)
+  const model = ctx.model
   if (!model) {
-    notify(ctx, `Unable to find ${MODEL_PROVIDER}/${MODEL_ID}.`, 'error')
+    notify(ctx, 'No active model is available.', 'error')
     return null
   }
 
   const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model)
   if (!auth.ok || !auth.apiKey) {
-    notify(
-      ctx,
-      `Unable to authenticate ${MODEL_PROVIDER}/${MODEL_ID}.`,
-      'error',
-    )
+    notify(ctx, 'Unable to authenticate the active model.', 'error')
     return null
   }
 
