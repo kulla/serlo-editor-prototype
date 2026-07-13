@@ -23,14 +23,17 @@ When `/commit` is invoked:
    - Use the repository diff as a second fallback.
    - Include `git diff`, `git status --porcelain`, and the contents/summaries of any untracked/new files as needed.
    - Trucanate the diff so that it is not too much.
+   - Limit the number of untracked files included and truncate each file summary.
 
 4. **Generate a commit message with ChatGPT 4o mini**
    - Send each gathered context candidate to **gpt-4o-mini** via the pi SDK.
+   - If the model is unavailable or cannot be authenticated, notify the user and stop.
    - The model must either return a **conventional commit** message or reply that the context is not enough.
    - Keep the output concise and suitable for use as a commit template.
 
 5. **Prepare the commit without auto-committing**
    - Stage all new and changed files with `git add -A`.
+   - If staging fails, notify the user and stop.
    - Invoke `git commit` using the generated message as a **template**.
    - Do **not** bypass user review; the commit should remain editable/confirmable by the user.
 
@@ -48,17 +51,26 @@ on /commit:
     assistant result messages + user prompts from session,
     trucanated git status / diff / untracked file summaries,
   ]
+  truncate git status / diff / untracked file summaries
+  limit untracked files and truncate each file summary
+
+  if model cannot be found or authenticated:
+    notify user and stop
 
   for context in contexts:
-    response = ask gpt-4o-mini to generate a conventional commit
+    model = get gpt-4o-mini model
+    if model is null:
+      notify user and stop
+    response = ask model to generate a conventional commit
     if response means "context is not enough":
       continue
     if response is a valid one-line commit subject:
       git add -A
+      if staging fails: notify user and stop
       git commit --template <response>
       stop
 
-  notify user that context was insufficient
+  notify user that a commit message could not be generated
 ```
 
 ## Output format

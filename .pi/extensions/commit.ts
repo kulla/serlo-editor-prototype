@@ -33,14 +33,6 @@ export default function (pi: ExtensionAPI) {
       }
 
       const commitMessage = await generateCommitMessage(pi, ctx)
-      if (commitMessage === INSUFFICIENT_CONTEXT_RESPONSE) {
-        notify(
-          ctx,
-          'Context is not enough to generate a commit message.',
-          'warning',
-        )
-        return
-      }
       if (!commitMessage) {
         notify(
           ctx,
@@ -67,7 +59,6 @@ async function generateCommitMessage(
   ctx: ExtensionCommandContext,
 ): Promise<string | null> {
   const contexts = await getCommitContexts(pi, ctx)
-  let sawInsufficientContext = false
 
   for (const context of contexts) {
     const message = await askModel(
@@ -77,14 +68,13 @@ async function generateCommitMessage(
     const commitMessage = normalizeOneLine(message ?? '')
     if (!commitMessage) continue
     if (isContextNotEnough(commitMessage)) {
-      sawInsufficientContext = true
       continue
     }
 
     return commitMessage
   }
 
-  return sawInsufficientContext ? INSUFFICIENT_CONTEXT_RESPONSE : null
+  return null
 }
 
 async function getCommitContexts(
@@ -135,10 +125,20 @@ async function askModel(
   prompt: string,
 ): Promise<string | null> {
   const model = ctx.modelRegistry.find(MODEL_PROVIDER, MODEL_ID)
-  if (!model) return null
+  if (!model) {
+    notify(ctx, `Unable to find ${MODEL_PROVIDER}/${MODEL_ID}.`, 'error')
+    return null
+  }
 
   const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model)
-  if (!auth.ok || !auth.apiKey) return null
+  if (!auth.ok || !auth.apiKey) {
+    notify(
+      ctx,
+      `Unable to authenticate ${MODEL_PROVIDER}/${MODEL_ID}.`,
+      'error',
+    )
+    return null
+  }
 
   const response = await complete(
     model,
@@ -177,7 +177,14 @@ async function stageAndOpenCommitEditor(
     await writeFile(templatePath, `${commitMessage}\n`, 'utf8')
 
     const add = await git(pi, ctx, ['add', '-A'])
-    if (add.code !== 0) return false
+    if (add.code !== 0) {
+      notify(
+        ctx,
+        `Failed to stage changes for commit: ${add.stderr.trim() || add.stdout.trim() || 'unknown error'}`,
+        'error',
+      )
+      return false
+    }
 
     const commit = await git(pi, ctx, ['commit', '--template', templatePath])
     return commit.code === 0
@@ -262,8 +269,8 @@ async function summarizeFile(
     const text = (await readFile(path, 'utf8')).trim()
     if (!text) return `File: ${file}\n[empty or binary file]`
 
-    const snippet = text.slice(0, 8_000)
-    return `File: ${file}\n${snippet}${text.length > snippet.length ? '\n...[truncated]' : ''}`
+    const snippet = truncateText(text, UNTRACKED_FILE_SUMMARY_MAX_CHARS)
+    return `File: ${file}\n${snippet}`
   } catch {
     return `File: ${file}\n[unable to read file contents]`
   }
