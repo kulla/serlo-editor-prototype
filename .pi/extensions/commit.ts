@@ -11,6 +11,10 @@ import type {
 const MODEL_PROVIDER = 'openai'
 const MODEL_ID = 'gpt-4o-mini'
 const GIT_SOURCE = 'git status, diffs, and untracked files'
+const INSUFFICIENT_CONTEXT_RESPONSE = 'CONTEXT_NOT_ENOUGH'
+const GIT_CONTEXT_MAX_CHARS = 12_000
+const UNTRACKED_FILE_LIMIT = 10
+const UNTRACKED_FILE_SUMMARY_MAX_CHARS = 2_000
 
 export default function (pi: ExtensionAPI) {
   pi.registerCommand('commit', {
@@ -28,13 +32,15 @@ export default function (pi: ExtensionAPI) {
         return
       }
 
-      const context = await getBestContext(pi, ctx)
-      const message = await askModel(
-        ctx,
-        buildCommitPrompt(context.text, context.source),
-      )
-
-      const commitMessage = message ? normalizeOneLine(message) : ''
+      const commitMessage = await generateCommitMessage(pi, ctx)
+      if (commitMessage === INSUFFICIENT_CONTEXT_RESPONSE) {
+        notify(
+          ctx,
+          'Context is not enough to generate a commit message.',
+          'warning',
+        )
+        return
+      }
       if (!commitMessage) {
         notify(
           ctx,
@@ -56,10 +62,35 @@ export default function (pi: ExtensionAPI) {
   })
 }
 
-async function getBestContext(
+async function generateCommitMessage(
   pi: ExtensionAPI,
   ctx: ExtensionCommandContext,
-): Promise<{ text: string; source: string }> {
+): Promise<string | null> {
+  const contexts = await getCommitContexts(pi, ctx)
+  let sawInsufficientContext = false
+
+  for (const context of contexts) {
+    const message = await askModel(
+      ctx,
+      buildCommitPrompt(context.text, context.source),
+    )
+    const commitMessage = normalizeOneLine(message ?? '')
+    if (!commitMessage) continue
+    if (isContextNotEnough(commitMessage)) {
+      sawInsufficientContext = true
+      continue
+    }
+
+    return commitMessage
+  }
+
+  return sawInsufficientContext ? INSUFFICIENT_CONTEXT_RESPONSE : null
+}
+
+async function getCommitContexts(
+  pi: ExtensionAPI,
+  ctx: ExtensionCommandContext,
+): Promise<{ text: string; source: string }[]> {
   const lastCommitTime = await getLastCommitTime(pi, ctx)
   const entries = ctx.sessionManager
     .getBranch()
@@ -67,33 +98,36 @@ async function getBestContext(
 
   const results = entries.filter(isAssistantMessage)
   const prompts = entries.filter(isUserMessage)
+  const contexts: { text: string; source: string }[] = []
 
   const resultText = renderTranscript(results)
-  if (resultText && (await isEnoughContext(ctx, resultText))) {
-    return { text: resultText, source: 'session result messages' }
+  if (resultText) {
+    contexts.push({ text: resultText, source: 'session result messages' })
   }
 
   if (prompts.length > 0) {
     const sessionText = renderTranscript([...results, ...prompts].sort(byTime))
-    if (sessionText && (await isEnoughContext(ctx, sessionText))) {
-      return {
+    if (sessionText && sessionText !== resultText) {
+      contexts.push({
         text: sessionText,
         source: 'session result messages and user prompts',
-      }
+      })
     }
   }
 
-  return { text: await getGitContext(pi, ctx), source: GIT_SOURCE }
+  contexts.push({ text: await getGitContext(pi, ctx), source: GIT_SOURCE })
+  return contexts
 }
 
-async function isEnoughContext(
-  ctx: ExtensionCommandContext,
-  text: string,
-): Promise<boolean> {
-  const answer = await askModel(ctx, buildSufficiencyPrompt(text))
-  return normalizeOneLine(answer ?? '')
-    .toUpperCase()
-    .startsWith('YES')
+function isContextNotEnough(text: string): boolean {
+  const normalized = text.toUpperCase().replace(/[^A-Z]+/g, '')
+  return (
+    normalized === 'CONTEXTNOTENOUGH' ||
+    normalized === 'CONTEXTISNOTENOUGH' ||
+    normalized === 'NOTENOUGHCONTEXT' ||
+    normalized === 'NEEDMORECONTEXT' ||
+    normalized === 'MORECONTEXTNEEDED'
+  )
 }
 
 async function askModel(
@@ -164,11 +198,23 @@ async function getGitContext(
   const untracked = await summarizeUntrackedFiles(ctx, status)
 
   return [
-    section('Git status', status || '[clean]'),
-    section('Staged diff', stagedDiff || '[no staged diff]'),
-    section('Working tree diff', diff || '[no diff]'),
+    section(
+      'Git status',
+      truncateText(status || '[clean]', GIT_CONTEXT_MAX_CHARS),
+    ),
+    section(
+      'Staged diff',
+      truncateText(stagedDiff || '[no staged diff]', GIT_CONTEXT_MAX_CHARS),
+    ),
+    section(
+      'Working tree diff',
+      truncateText(diff || '[no diff]', GIT_CONTEXT_MAX_CHARS),
+    ),
     untracked.length > 0
-      ? section('Untracked files', untracked.join('\n---\n'))
+      ? section(
+          'Untracked files',
+          truncateText(untracked.join('\n---\n'), GIT_CONTEXT_MAX_CHARS),
+        )
       : '',
   ]
     .filter(Boolean)
@@ -186,9 +232,21 @@ async function summarizeUntrackedFiles(
     .filter(Boolean)
 
   const summaries: string[] = []
-  for (const file of files) {
-    summaries.push(await summarizeFile(ctx, file))
+  for (const file of files.slice(0, UNTRACKED_FILE_LIMIT)) {
+    summaries.push(
+      truncateText(
+        await summarizeFile(ctx, file),
+        UNTRACKED_FILE_SUMMARY_MAX_CHARS,
+      ),
+    )
   }
+
+  if (files.length > UNTRACKED_FILE_LIMIT) {
+    summaries.push(
+      `[${files.length - UNTRACKED_FILE_LIMIT} more untracked file(s) omitted]`,
+    )
+  }
+
   return summaries
 }
 
@@ -287,7 +345,8 @@ function normalizeOneLine(text: string): string {
 function buildCommitPrompt(contextText: string, source: string): string {
   return [
     'Write one concise conventional commit subject.',
-    'Return exactly one line and nothing else.',
+    `If the context is not enough to infer one, reply exactly ${INSUFFICIENT_CONTEXT_RESPONSE} or "context is not enough".`,
+    'Otherwise return exactly one line and nothing else.',
     'Use format: type(scope): description or type: description.',
     'Prefer a meaningful scope when obvious.',
     '',
@@ -298,20 +357,13 @@ function buildCommitPrompt(contextText: string, source: string): string {
   ].join('\n')
 }
 
-function buildSufficiencyPrompt(contextText: string): string {
-  return [
-    'Is this context sufficient to infer one conventional commit subject?',
-    'Reply with exactly YES or NO.',
-    'Choose YES only if the change is clear without reading git diff.',
-    '',
-    '<context>',
-    contextText,
-    '</context>',
-  ].join('\n')
-}
-
 function section(title: string, body: string): string {
   return `${title}:\n${body}`
+}
+
+function truncateText(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text
+  return `${text.slice(0, maxChars)}\n...[truncated]`
 }
 
 function notify(
