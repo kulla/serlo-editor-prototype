@@ -56,7 +56,7 @@ on /commit:
     notify user and stop
 
   for context in contexts:
-    model = get gpt-4o-mini model
+    model = get gpt-5.4-mini model
     if model is null:
       notify user and stop
     response = ask model to generate a conventional commit

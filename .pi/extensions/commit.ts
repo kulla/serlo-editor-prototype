@@ -9,7 +9,7 @@ import type {
 } from '@earendil-works/pi-coding-agent'
 
 const MODEL_PROVIDER = 'openai'
-const MODEL_ID = 'gpt-4o-mini'
+const MODEL_ID = 'gpt-5.4-mini'
 const GIT_SOURCE = 'git status, diffs, and untracked files'
 const INSUFFICIENT_CONTEXT_RESPONSE = 'CONTEXT_NOT_ENOUGH'
 const GIT_CONTEXT_TOTAL_MAX_CHARS = 5_000
