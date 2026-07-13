@@ -12,9 +12,9 @@ const MODEL_PROVIDER = 'openai'
 const MODEL_ID = 'gpt-4o-mini'
 const GIT_SOURCE = 'git status, diffs, and untracked files'
 const INSUFFICIENT_CONTEXT_RESPONSE = 'CONTEXT_NOT_ENOUGH'
-const GIT_CONTEXT_MAX_CHARS = 12_000
+const GIT_CONTEXT_TOTAL_MAX_CHARS = 5_000
 const UNTRACKED_FILE_LIMIT = 10
-const UNTRACKED_FILE_SUMMARY_MAX_CHARS = 2_000
+const UNTRACKED_FILE_SUMMARY_MAX_CHARS = 400
 
 export default function (pi: ExtensionAPI) {
   pi.registerCommand('commit', {
@@ -204,28 +204,18 @@ async function getGitContext(
   ])
   const untracked = await summarizeUntrackedFiles(ctx, status)
 
-  return [
-    section(
-      'Git status',
-      truncateText(status || '[clean]', GIT_CONTEXT_MAX_CHARS),
-    ),
-    section(
-      'Staged diff',
-      truncateText(stagedDiff || '[no staged diff]', GIT_CONTEXT_MAX_CHARS),
-    ),
-    section(
-      'Working tree diff',
-      truncateText(diff || '[no diff]', GIT_CONTEXT_MAX_CHARS),
-    ),
+  const gitContext = [
+    section('Git status', status || '[clean]'),
+    section('Staged diff', stagedDiff || '[no staged diff]'),
+    section('Working tree diff', diff || '[no diff]'),
     untracked.length > 0
-      ? section(
-          'Untracked files',
-          truncateText(untracked.join('\n---\n'), GIT_CONTEXT_MAX_CHARS),
-        )
+      ? section('Untracked files', untracked.join('\n---\n'))
       : '',
   ]
     .filter(Boolean)
     .join('\n\n')
+
+  return truncateText(gitContext, GIT_CONTEXT_TOTAL_MAX_CHARS)
 }
 
 async function summarizeUntrackedFiles(
