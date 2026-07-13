@@ -15,9 +15,8 @@ When `/commit` is invoked:
 
 2. **Build context from the current session**
    - First collect all AI **result messages** produced since that timestamp.
-   - Ask **gpt-4o-mini** whether those result messages are sufficient to infer a conventional commit message.
-   - If the answer is yes, use only those result messages.
-   - If the result messages are empty or insufficient, also include the related **user prompts** from the same time window and re-evaluate.
+   - Ask **gpt-4o-mini** to generate a conventional commit subject from that context.
+   - If the model replies that the context is not enough, include the related **user prompts** from the same time window and try again.
    - If the session context is still insufficient, continue to the git-diff fallback.
 
 3. **Fallback to git diff if needed**
@@ -25,14 +24,41 @@ When `/commit` is invoked:
    - Include `git diff`, `git status --porcelain`, and the contents/summaries of any untracked/new files as needed.
 
 4. **Generate a commit message with ChatGPT 4o mini**
-   - Send the gathered context to **gpt-4o-mini** via the pi SDK.
-   - The model must return a **conventional commit** message.
+   - Send each gathered context candidate to **gpt-4o-mini** via the pi SDK.
+   - The model must either return a **conventional commit** message or reply that the context is not enough.
    - Keep the output concise and suitable for use as a commit template.
 
 5. **Prepare the commit without auto-committing**
    - Stage all new and changed files with `git add -A`.
    - Invoke `git commit` using the generated message as a **template**.
    - Do **not** bypass user review; the commit should remain editable/confirmable by the user.
+
+## Pseudo code
+```text
+on /commit:
+  if not git repo: stop
+  if no changes: stop
+
+  lastCommitTime = get latest commit timestamp
+  session = pi session entries newer than lastCommitTime
+
+  contexts = [
+    assistant result messages from session,
+    assistant result messages + user prompts from session,
+    git status / diff / untracked file summaries,
+  ]
+
+  for context in contexts:
+    response = ask gpt-4o-mini to generate a conventional commit
+    if response means "context is not enough":
+      continue
+    if response is a valid one-line commit subject:
+      git add -A
+      git commit --template <response>
+      stop
+
+  notify user that context was insufficient
+```
 
 ## Output format
 The generated message should follow conventional commits, for example:
