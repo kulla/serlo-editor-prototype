@@ -12,7 +12,7 @@
     "dev": "bun --watch src/index.html",
     "format": "biome format --write",
     "preview": "bun run build && bun dist/index.html",
-    "test:e2e": "./scripts/test"
+    "test:e2e": "./scripts/e2e-tests"
   },
   "dependencies": {
     "clsx": "2.1.1",
