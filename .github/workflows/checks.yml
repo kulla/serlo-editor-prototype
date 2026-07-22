@@ -23,6 +23,15 @@ jobs:
       - uses: ./.github/actions/setup-bun
       - run: bun run build
 
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-bun
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+      - run: bun test:e2e
+
   format:
     runs-on: ubuntu-latest
     steps:
