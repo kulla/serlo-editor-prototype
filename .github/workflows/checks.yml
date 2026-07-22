@@ -28,19 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-bun
-      - run: |
-          bun run dev >/tmp/dev.log 2>&1 &
-          dev_pid=$!
-          trap 'kill $dev_pid' EXIT
-
-          for _ in {1..60}; do
-            if curl -fsS http://localhost:3000 >/dev/null; then
-              break
-            fi
-            sleep 1
-          done
-
-          bun test:e2e
+      - run: bun test:e2e
 
   format:
     runs-on: ubuntu-latest
