@@ -28,6 +28,6 @@ function clickInEditor(page: Page, editorName: EditorName) {
 
 function expectCursorInEditor(page: Page, editorName: EditorName) {
   return expect(
-    page.getByLabel(editorName).locator('.ProseMirror-loro-cursor'),
+    page.getByLabel(editorName).locator('.ProseMirror-yjs-cursor'),
   ).toBeVisible()
 }
