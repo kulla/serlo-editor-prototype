@@ -3,4 +3,4 @@
 SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 ROOT_DIR="$(realpath "$SCRIPT_DIR/..")"
 
-cd "$ROOT_DIR" && nono run --allow "$ROOT_DIR" --profile pi -- pi
+cd "$ROOT_DIR" && nono run --allow "$ROOT_DIR" --open-port 3000 --profile pi -- pi
