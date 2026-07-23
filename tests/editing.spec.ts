@@ -4,13 +4,6 @@ import { loadPrototype } from './utils'
 
 const normalParagraph =
   'This is an example of educational content with various types of items.'
-const multipleChoiceQuestion = 'What is 2 + 2?'
-const typedText = 'formatted text'
-
-const formattingCases = [
-  { button: 'Toggle Bold', tag: 'strong' },
-  { button: 'Italic', tag: 'em' },
-] as const
 
 test('typing in a normal text block syncs to the other editor', async ({
   page,
@@ -28,16 +21,20 @@ test('editing multiple-choice question text syncs to the other editor', async ({
 }) => {
   await loadPrototype(page)
 
-  await selectTextInEditor(page, EditorName.Editor1, multipleChoiceQuestion)
+  await selectTextInEditor(page, EditorName.Editor1, 'What is 2 + 2?')
   await page.keyboard.type('What is 2 + 3?')
 
   await expectTextVisibleInBothEditors(page, 'What is 2 + 3?')
 })
 
-for (const { button, tag } of formattingCases) {
+for (const { button, tag } of [
+  { button: 'Toggle Bold', tag: 'strong' },
+  { button: 'Italic', tag: 'em' },
+] as const) {
   test(`${button.toLowerCase()} applies to newly typed text`, async ({
     page,
   }) => {
+    const typedText = 'formatted text'
     await loadPrototype(page)
 
     await clickTextAndMoveToEnd(page, EditorName.Editor1, normalParagraph)
