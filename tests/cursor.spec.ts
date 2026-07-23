@@ -1,11 +1,11 @@
-import { expect, type Page, test } from '@playwright/test'
+import { test } from '@playwright/test'
 import { EditorName } from '../src/cdrt/types'
-import { loadPrototype } from './utils'
+import { clickText, expectCursorInEditor, loadPrototype } from './utils'
 
 test('Cursor of first editor is visible in second editor', async ({ page }) => {
   await loadPrototype(page)
 
-  await clickInEditor(page, EditorName.Editor1)
+  await clickText(page, EditorName.Editor1, /This is an example/)
 
   await expectCursorInEditor(page, EditorName.Editor2)
 })
@@ -13,21 +13,8 @@ test('Cursor of first editor is visible in second editor', async ({ page }) => {
 test('Cursor changes when editor focus is changed', async ({ page }) => {
   await loadPrototype(page)
 
-  await clickInEditor(page, EditorName.Editor2)
-  await clickInEditor(page, EditorName.Editor1)
+  await clickText(page, EditorName.Editor2, /This is an example/)
+  await clickText(page, EditorName.Editor1, /This is an example/)
 
   await expectCursorInEditor(page, EditorName.Editor2)
 })
-
-function clickInEditor(page: Page, editorName: EditorName) {
-  return page
-    .getByLabel(editorName)
-    .getByText(/This is an example/)
-    .click()
-}
-
-function expectCursorInEditor(page: Page, editorName: EditorName) {
-  return expect(
-    page.getByLabel(editorName).locator('.ProseMirror-yjs-cursor'),
-  ).toBeVisible()
-}
