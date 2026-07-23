@@ -1,3 +1,3 @@
-A web-based WYSIWYG editor prototype built with React, ProseMirror, and Loro CRDT for collaborative editing. The project uses a schema-driven architecture with flat node storage for efficient CRDT operations.
+Web-based WYSIWYG editor prototype using React, ProseMirror, and Loro CRDT with schema-driven, flat node storage.
 
-* **Checks:** Run `./node_modules/.bin/biome format --write` and `./node_modules/.bin/tsc --noEmit` after each code change.
+* **Checks:** Run `./node_modules/.bin/biome format --write`, `./node_modules/.bin/tsc --noEmit`, and `scripts/e2e-tests` after each code change.
