@@ -18,7 +18,7 @@ Use stable, user-visible selectors whenever possible:
 ## Goal
 Add Playwright e2e coverage for:
 - collaborative editing between both editors
-- editing and undoing multiple-choice content
+- editing multiple-choice content and syncing the change
 - bold/italic toolbar behavior for typed text and selected text
 - gap button visibility and gap mark toggling
 
@@ -28,6 +28,13 @@ And the cursor is inside the normal text block in `Editor 1`
 When I type `Hello World`
 Then `Hello World` is visible in `Editor 1`
 And `Hello World` is visible in `Editor 2`
+
+## Scenario: Editing multiple-choice content syncs to the other editor
+Given the prototype is loaded
+And a multiple-choice field is edited in `Editor 1`
+When I change visible multiple-choice text
+Then the updated text is visible in `Editor 1`
+And the updated text is visible in `Editor 2`
 
 ## Scenario Outline: Bold and italic apply to newly typed text
 Given the prototype is loaded
