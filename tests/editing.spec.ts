@@ -86,10 +86,6 @@ function editor(page: Page, editorName: EditorName) {
   return page.getByLabel(editorName)
 }
 
-function editorContent(page: Page, editorName: EditorName) {
-  return editor(page, editorName).locator('.ProseMirror')
-}
-
 function toolbarButton(page: Page, editorName: EditorName, buttonName: string) {
   return editor(page, editorName).getByRole('button', { name: buttonName })
 }
@@ -124,21 +120,28 @@ async function selectTextInEditor(
   editorName: EditorName,
   selectedText: string,
 ) {
-  await clickText(page, editorName, selectedText)
+  const text = editor(page, editorName).getByText(selectedText).first()
+  await text.click()
 
-  await editorContent(page, editorName).evaluate((root, text) => {
+  await text.evaluate((node, selected) => {
+    const root = node.closest('[contenteditable="true"]')
+
+    if (root == null) {
+      throw new Error('Expected an editable root element')
+    }
+
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
-    let node = walker.nextNode()
+    let current = walker.nextNode()
 
-    while (node != null) {
-      const textNode = node as Text
+    while (current != null) {
+      const textNode = current as Text
       const value = textNode.nodeValue ?? ''
-      const index = value.indexOf(text)
+      const index = value.indexOf(selected)
 
       if (index >= 0) {
         const range = document.createRange()
         range.setStart(textNode, index)
-        range.setEnd(textNode, index + text.length)
+        range.setEnd(textNode, index + selected.length)
 
         const selection = root.ownerDocument?.getSelection()
 
@@ -152,10 +155,10 @@ async function selectTextInEditor(
         return
       }
 
-      node = walker.nextNode()
+      current = walker.nextNode()
     }
 
-    throw new Error(`Could not find text: ${text}`)
+    throw new Error(`Could not find text: ${selected}`)
   }, selectedText)
 }
 
@@ -171,12 +174,12 @@ async function expectFormattedText(
   tag: 'strong' | 'em',
 ) {
   await expect(
-    editorContent(page, editorName).locator(tag, { hasText: text }),
+    editor(page, editorName).locator(tag, { hasText: text }),
   ).toBeVisible()
 }
 
 async function expectGapText(page: Page, editorName: EditorName, text: string) {
   await expect(
-    editorContent(page, editorName).locator('.gap-mark', { hasText: text }),
+    editor(page, editorName).locator('.gap-mark', { hasText: text }),
   ).toBeVisible()
 }
