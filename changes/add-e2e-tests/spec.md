@@ -18,7 +18,7 @@ Use stable, user-visible selectors whenever possible:
 ## Goal
 Add Playwright e2e coverage for:
 - collaborative editing between both editors
-- editing multiple-choice content and syncing the change
+- editing multiple-choice question text and syncing the change
 - bold/italic toolbar behavior for typed text and selected text
 - gap button visibility and gap mark toggling
 
@@ -29,12 +29,12 @@ When I type `Hello World`
 Then `Hello World` is visible in `Editor 1`
 And `Hello World` is visible in `Editor 2`
 
-## Scenario: Editing multiple-choice content syncs to the other editor
+## Scenario: Editing multiple-choice question text syncs to the other editor
 Given the prototype is loaded
-And a multiple-choice field is edited in `Editor 1`
-When I change visible multiple-choice text
-Then the updated text is visible in `Editor 1`
-And the updated text is visible in `Editor 2`
+And the multiple-choice question text is selected in `Editor 1`
+When I change `What is 2 + 2?` to `What is 2 + 3?`
+Then `What is 2 + 3?` is visible in `Editor 1`
+And `What is 2 + 3?` is visible in `Editor 2`
 
 ## Scenario Outline: Bold and italic apply to newly typed text
 Given the prototype is loaded
@@ -42,23 +42,25 @@ And the cursor is inside the normal text block in `Editor 1`
 Then the `<button>` toolbar button is visible and enabled
 When I click the `<button>` toolbar button
 And I type `formatted text`
-Then `formatted text` is rendered with `<mark>` formatting in `Editor 1`
+Then `formatted text` is rendered with `<tag>` formatting in `Editor 1`
+And `formatted text` is rendered with `<tag>` formatting in `Editor 2`
 And the formatting is applied to newly entered text after the toolbar action
 Examples:
-  | button | mark   |
-  | Bold   | bold   |
-  | Italic | italic |
+  | button | tag    |
+  | Bold   | strong |
+  | Italic | em     |
 
 ## Scenario Outline: Bold and italic apply to selected text
 Given the prototype is loaded
 And existing text in the normal text block is selected in `Editor 1`
 When I click the `<button>` toolbar button
-Then the selected text is rendered with `<mark>` formatting in `Editor 1`
+Then the selected text is rendered with `<tag>` formatting in `Editor 1`
+And the selected text is rendered with `<tag>` formatting in `Editor 2`
 And the formatting change affects the selected content itself
 Examples:
-  | button | mark   |
-  | Bold   | bold   |
-  | Italic | italic |
+  | button | tag    |
+  | Bold   | strong |
+  | Italic | em     |
 
 ## Scenario: Gap button is only available in the fill-in-the-blank exercise
 Given the prototype is loaded
@@ -72,14 +74,13 @@ Given the prototype is loaded
 And text is selected in the fill-in-the-blank exercise in `Editor 1`
 When I click the `Gap` toolbar button
 Then the selected text is rendered as a gap mark in `Editor 1`
-And the gap-marked content is visible in `Editor 2`
+And the selected text is rendered as a gap mark in `Editor 2`
 And the rendered gap uses the existing `.gap-mark` styling
 
 ## Implementation notes
 - The tests should use the existing `tests/utils.ts` helper.
 - Prefer clicks and keyboard input over direct DOM mutation.
 - For selection-based formatting, the test should first create a text selection, then click the toolbar button.
+- Bold should assert rendered `<strong>` markup; italic should assert rendered `<em>` markup.
+- Multiple-choice editing should target the question text and change a single visible value.
 - Keep the tests deterministic and avoid relying on timing beyond the existing editor load wait.
-
-## Not to do
-- do not test undo features (they are not implemented yet)

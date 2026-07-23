@@ -42,24 +42,24 @@
 - Assert the text appears in both editors.
 - Use the visible text content as the main assertion.
 
-### 2) Multiple-choice edit + undo
-- Interact with the multiple-choice question or an option text.
-- Make a visible content change that is easy to assert.
-- Trigger undo using the editor/browser undo shortcut.
-- Assert the original text returns in both editors.
+### 2) Multiple-choice edit + sync
+- Interact with the multiple-choice question text.
+- Change one visible value, such as `What is 2 + 2?` to `What is 2 + 3?`.
+- Assert the updated question appears in both editors.
 
 ### 3) Bold / italic
 - These features are available in the normal text block because `ContentRichText` includes bold and italic.
 - The tests should cover both:
   - typing after clicking the toolbar button
   - formatting already selected text
-- For assertions, inspect the resulting rendered markup or use the editor text/DOM structure that Playwright can observe.
+- For assertions, inspect rendered `<strong>` for bold and `<em>` for italic.
+- Verify the formatting is mirrored in both editors.
 
 ### 4) Gap button and gap mark
 - The `Gap` button should not be visible when focus is in the normal text block.
 - It should become visible when focus is moved into the fill-in-the-blank exercise.
 - The fill-in-the-blank content already contains the word `Paris` with a gap mark in initial content.
-- Toggling gap should produce the existing `.gap-mark` rendering.
+- Toggling gap should produce the existing `.gap-mark` rendering in both editors.
 
 ## Suggested test organization
 - Keep the existing smoke/cursor tests.
