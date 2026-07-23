@@ -20,12 +20,7 @@ test('typing in a normal text block syncs to the other editor', async ({
   await clickTextAndMoveToEnd(page, EditorName.Editor1, normalParagraph)
   await page.keyboard.type(' Hello World')
 
-  await expect(
-    page.getByLabel(EditorName.Editor1).getByText('Hello World'),
-  ).toBeVisible()
-  await expect(
-    page.getByLabel(EditorName.Editor2).getByText('Hello World'),
-  ).toBeVisible()
+  await expectTextVisibleInBothEditors(page, 'Hello World')
 })
 
 test('editing multiple-choice question text syncs to the other editor', async ({
@@ -36,12 +31,7 @@ test('editing multiple-choice question text syncs to the other editor', async ({
   await selectTextInEditor(page, EditorName.Editor1, multipleChoiceQuestion)
   await page.keyboard.type('What is 2 + 3?')
 
-  await expect(
-    page.getByLabel(EditorName.Editor1).getByText('What is 2 + 3?'),
-  ).toBeVisible()
-  await expect(
-    page.getByLabel(EditorName.Editor2).getByText('What is 2 + 3?'),
-  ).toBeVisible()
+  await expectTextVisibleInBothEditors(page, 'What is 2 + 3?')
 })
 
 for (const { button, tag } of formattingCases) {
@@ -167,6 +157,11 @@ async function selectTextInEditor(
 
     throw new Error(`Could not find text: ${text}`)
   }, selectedText)
+}
+
+async function expectTextVisibleInBothEditors(page: Page, text: string) {
+  await expect(editor(page, EditorName.Editor1).getByText(text)).toBeVisible()
+  await expect(editor(page, EditorName.Editor2).getByText(text)).toBeVisible()
 }
 
 async function expectFormattedText(
