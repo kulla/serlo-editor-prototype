@@ -32,5 +32,8 @@
     "@tsconfig/bun": "1.0.10",
     "@types/react-dom": "19.2.3",
     "typescript": "7.0.2"
+  },
+  "overrides": {
+    "prosemirror-model": "1.25.11"
   }
 }
