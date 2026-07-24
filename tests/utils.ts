@@ -57,7 +57,7 @@ export async function selectTextInEditor(
   const text = editor(page, editorName).getByText(selectedText).first()
   await text.click()
 
-  await text.evaluate((node, selected) => {
+  await text.evaluate(async (node, selected) => {
     const root = node.closest('[contenteditable="true"]')
 
     if (root == null) {
@@ -73,18 +73,23 @@ export async function selectTextInEditor(
       const index = value.indexOf(selected)
 
       if (index >= 0) {
-        const range = document.createRange()
-        range.setStart(textNode, index)
-        range.setEnd(textNode, index + selected.length)
-
         const selection = root.ownerDocument?.getSelection()
 
         if (selection == null) {
           throw new Error('Expected an active selection')
         }
 
-        selection.removeAllRanges()
-        selection.addRange(range)
+        await new Promise<void>((resolve) => {
+          document.addEventListener('selectionchange', () => resolve(), {
+            once: true,
+          })
+          selection.setBaseAndExtent(
+            textNode,
+            index,
+            textNode,
+            index + selected.length,
+          )
+        })
 
         return
       }
